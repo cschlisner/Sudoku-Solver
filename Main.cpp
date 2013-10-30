@@ -71,8 +71,23 @@ void readBoard(string BoardName){
 	
 }
 
+int findBox(int X, int Y){
+	int correctBox;
+	for (int i=0; i<9; ++i){
+		for (int j=boxes[i].x; j<(boxes[i].x+3); ++j){
+			if (j==X){
+				for (int k=boxes[i].y; k<(boxes[i].y+3); ++k){
+					if (k==Y)
+						correctBox = i;
+				}
+			}
+		}
+	}
+	return correctBox;
+}
 
 void logBoard(){
+	cout<<"--logging--"<<endl;
 	bool possible[10] = {true, true, true, true, true, true, true, true, true, true};
 	int i, j, p;
 	for (int c=0; c<9; ++c){
@@ -154,28 +169,13 @@ void letsSeeIt(int x, int y){
 	cout<<endl<<endl;
 }
 
-int findBox(int X, int Y){
-	int correctBox;
-	for (int i=0; i<9; ++i){
-		for (int j=boxes[i].x; j<(boxes[i].x+3); ++j){
-			if (j==X){
-				for (int k=boxes[i].y; k<(boxes[i].y+3); ++k){
-					if (k==Y)
-						correctBox = i;
-				}
-			}
-		}
-	}
-	return correctBox;
-}
-
-void removeDuplicates(){
+/*void removeDuplicates(){ 
 	for (int i=0; i<9; ++i){
 		for (int k=1; k<11; ++k){
 			rowLog[i].used[k] = false;
 			columnLog[i].used[k] = false;
 			boxLog[i].used[k] = false;
-		}
+		}									<-- Make this into a function to revise non-original entries
 	}
 	for (int j=0; j<9; ++j){
 		for (int i=0; i<9; ++i){			
@@ -193,10 +193,11 @@ void removeDuplicates(){
 			}
 		}
 	}
-}
+}*/
 
 bool checkPuzzle(){
 	logBoard();
+	cout<<"--checking--"<<endl;
 	bool allThere = false, noRepeats=true;
 	for (int i=0; i<9; ++i){
 		if (boxLog[i].filled==9 && rowLog[i].filled==9 && columnLog[i].filled==9)
@@ -255,6 +256,8 @@ void solveEntry(int x, int y){
 		}
 		else if (Entry.totalPos-1==0){
 			entries[x][y].value = Entry.solution[0];
+			entries[x][y].original = true;
+			cout<<"set original"<<endl;
 		}
 		if (feedBack){
 			cout<<"tried "<<entries[x][y].value<<" of [ ";
@@ -274,6 +277,7 @@ void solveEntry(int x, int y){
 
 void prioritize(){
 	logBoard();
+	cout<<"--sorting--"<<endl;
 	int rowQueue[9], columnQueue[9], rowVals[9], colVals[9];
 	for (int i=0; i<9; ++i){
 		rowVals[i] = rowLog[i].filled;
@@ -319,13 +323,26 @@ void prioritize(){
 		   }
 	  }
 	}
-	cout<<"SOLVING FOR COLUMN "<<columnQueue[topC]<<" OR ROW "<<rowQueue[topR]<<endl;
-	for (j=0; j<9; ++j){
-		if (columnLog[columnQueue[topC]].filled > rowLog[rowQueue[topR]].filled)
-			solveEntry(columnQueue[topC], j);
-		else solveEntry(j, rowQueue[topR]);
+	if (columnLog[columnQueue[topC]].filled < rowLog[rowQueue[topR]].filled){
+		cout<<"solving for row "<<rowQueue[topR]<<", column ";
+		for (i=0; i<9; ++i){
+			cout<<columnQueue[i];
+			if (entries[columnQueue[i]][rowQueue[topR]].value == 0){
+				solveEntry(columnQueue[i], rowQueue[topR]);
+				break;
+			}
+		}
 	}
-	logBoard();
+	else {
+		cout<<"solving for column "<<columnQueue[topC]<<", row ";
+		for (i=0; i<9; ++i){
+			cout<<rowQueue[i];
+			if (entries[columnQueue[topC]][rowQueue[i]].value == 0){
+				solveEntry(columnQueue[topC], rowQueue[i]);
+				break;
+			}
+		}
+	}
 	if (columnLog[columnQueue[topC]].filled == 9)
 		++topC;
 	if (rowLog[rowQueue[topR]].filled == 9)
@@ -334,10 +351,7 @@ void prioritize(){
 
 void solveLoop(){
 	if (!checkPuzzle()){
-		cout<<"--sorting--"<<endl;
 		prioritize();		
-		cout<<"--removing duplicates--"<<endl;
-		removeDuplicates();
 		solveLoop();
 	}
 	else {
