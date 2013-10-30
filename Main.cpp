@@ -28,49 +28,6 @@ box boxes[9];
 bool feedBack;
 int topC = 0, topR = 0;
 
-void readBoard(string BoardName){
-	char ent;
-	int i=0, j=0;
-	ifstream BoardFile (("Sudoku Boards/"+BoardName).c_str());
-	while (!BoardFile.eof()){
-		BoardFile.get(ent);
-		if (ent-'0' != -38){
-			entries[i][j].value = ent - '0';
-			if ((ent - '0')>0) entries[i][j].original = true;
-			if (i==8){
-				i=0;
-				++j;
-			}
-			else ++i;
-		}
-	}
-	
-}
-
-void letsSeeIt(int x, int y){
-	for (int j=0; j<9; ++j){
-		if (j%3==0)
-			 cout<<endl<<"-------------------"<<endl;
-		else cout<<endl;
-		for (int i=0; i<9; ++i){
-			if (i%3==0)
-				cout<<"|";	
-			else cout<<" ";		
-			cout<<entries[i][j].value;	
-		}
-		cout<<"|";
-		if (j==y)
-			cout<<"<";
-	}
-	cout<<endl<<"-------------------"<<endl;
-	cout<<" ";
-	for (int i=0; i<9; ++i){
-		if (i==x)
-			cout<<"^";
-		cout<<"  ";				
-	}
-	cout<<endl<<endl;
-}
 
 void setUpBoxes(){
 	 // starting from 1st Box (top left of board)
@@ -94,48 +51,28 @@ void setUpBoxes(){
 	boxes[8].x = 6;
 }
 
-int findBox(int X, int Y){
-	int correctBox;
-	for (int i=0; i<9; ++i){
-		for (int j=boxes[i].x; j<(boxes[i].x+3); ++j){
-			if (j==X){
-				for (int k=boxes[i].y; k<(boxes[i].y+3); ++k){
-					if (k==Y)
-						correctBox = i;
-				}
+
+void readBoard(string BoardName){
+	char ent;
+	int i=0, j=0;
+	ifstream BoardFile (("Sudoku Boards/"+BoardName).c_str());
+	while (!BoardFile.eof()){
+		BoardFile.get(ent);
+		if (ent-'0' != -38){
+			entries[i][j].value = ent - '0';
+			if ((ent - '0')>0) entries[i][j].original = true;
+			if (i==8){
+				i=0;
+				++j;
 			}
+			else ++i;
 		}
 	}
-	return correctBox;
+	
 }
 
-void removeDuplicates(){
-	for (int i=0; i<9; ++i){
-		for (int k=1; k<11; ++k){
-			rowLog[i].used[k] = false;
-			columnLog[i].used[k] = false;
-			boxLog[i].used[k] = false;
-		}
-	}
-	for (int j=0; j<9; ++j){
-		for (int i=0; i<9; ++i){			
-			int b = findBox(i, j);
-			for (int k=1; k<11; ++k){
-				 if (entries[i][j].value == k){
 
-					if (!rowLog[j].used[k]) rowLog[j].used[k] = true;
-					else entries[i][j].value = 0;
-					if (!columnLog[i].used[k]) columnLog[i].used[k] = true;
-					else entries[i][j].value = 0;
-					if (!boxLog[b].used[k]) boxLog[b].used[k] = true;
-					else entries[i][j].value = 0;
-				}
-			}
-		}
-	}
-}
-
-void logThatShit(){
+void logBoard(){
 	bool possible[10] = {true, true, true, true, true, true, true, true, true, true};
 	int i, j, p;
 	for (int c=0; c<9; ++c){
@@ -190,8 +127,76 @@ void logThatShit(){
 	}
 }
 
-bool checkThatShit(){
-	logThatShit();
+
+void letsSeeIt(int x, int y){
+	logBoard();
+	for (int j=0; j<9; ++j){
+		if (j%3==0)
+			 cout<<endl<<"-------------------"<<endl;
+		else cout<<endl;
+		for (int i=0; i<9; ++i){
+			if (i%3==0)
+				cout<<"|";	
+			else cout<<" ";		
+			cout<<entries[i][j].value;	
+		}
+		cout<<"|";
+		if (j==y)
+			cout<<"<";
+	}
+	cout<<endl<<"-------------------"<<endl;
+	cout<<" ";
+	for (int i=0; i<9; ++i){
+		if (i==x)
+			cout<<"^";
+		cout<<"  ";				
+	}
+	cout<<endl<<endl;
+}
+
+int findBox(int X, int Y){
+	int correctBox;
+	for (int i=0; i<9; ++i){
+		for (int j=boxes[i].x; j<(boxes[i].x+3); ++j){
+			if (j==X){
+				for (int k=boxes[i].y; k<(boxes[i].y+3); ++k){
+					if (k==Y)
+						correctBox = i;
+				}
+			}
+		}
+	}
+	return correctBox;
+}
+
+void removeDuplicates(){
+	for (int i=0; i<9; ++i){
+		for (int k=1; k<11; ++k){
+			rowLog[i].used[k] = false;
+			columnLog[i].used[k] = false;
+			boxLog[i].used[k] = false;
+		}
+	}
+	for (int j=0; j<9; ++j){
+		for (int i=0; i<9; ++i){			
+			int b = findBox(i, j);
+			for (int k=1; k<11; ++k){
+				 if (entries[i][j].value == k){
+
+					if (!rowLog[j].used[k]) rowLog[j].used[k] = true;
+					else entries[i][j].value = 0;
+					if (!columnLog[i].used[k]) columnLog[i].used[k] = true;
+					else entries[i][j].value = 0;
+					if (!boxLog[b].used[k]) boxLog[b].used[k] = true;
+					else entries[i][j].value = 0;
+				}
+			}
+		}
+	}
+}
+
+bool checkPuzzle(){
+	logBoard();
 	bool allThere = false, noRepeats=true;
 	for (int i=0; i<9; ++i){
 		if (boxLog[i].filled==9 && rowLog[i].filled==9 && columnLog[i].filled==9)
@@ -230,9 +235,9 @@ int determinePossibility(entry Entry){
 	return mostLikely;
 }
 		
-void solveThatShit(int x, int y){
+void solveEntry(int x, int y){
 	cout<<endl<<"for ("<<x<<","<<y<<"):"<<endl;
-	logThatShit();
+	logBoard();
 	int ans;
 	entry Entry = entries[x][y];
 	if (Entry.value == 0){
@@ -267,8 +272,8 @@ void solveThatShit(int x, int y){
 	}
 }
 
-void sortThatShit(){
-	logThatShit();
+void prioritize(){
+	logBoard();
 	int rowQueue[9], columnQueue[9], rowVals[9], colVals[9];
 	for (int i=0; i<9; ++i){
 		rowVals[i] = rowLog[i].filled;
@@ -317,10 +322,10 @@ void sortThatShit(){
 	cout<<"SOLVING FOR COLUMN "<<columnQueue[topC]<<" OR ROW "<<rowQueue[topR]<<endl;
 	for (j=0; j<9; ++j){
 		if (columnLog[columnQueue[topC]].filled > rowLog[rowQueue[topR]].filled)
-			solveThatShit(columnQueue[topC], j);
-		else solveThatShit(j, rowQueue[topR]);
+			solveEntry(columnQueue[topC], j);
+		else solveEntry(j, rowQueue[topR]);
 	}
-	logThatShit();
+	logBoard();
 	if (columnLog[columnQueue[topC]].filled == 9)
 		++topC;
 	if (rowLog[rowQueue[topR]].filled == 9)
@@ -328,26 +333,24 @@ void sortThatShit(){
 }
 
 void solveLoop(){
-	if (!checkThatShit()){
+	if (!checkPuzzle()){
 		cout<<"--sorting--"<<endl;
-		sortThatShit();		
+		prioritize();		
 		cout<<"--removing duplicates--"<<endl;
 		removeDuplicates();
 		solveLoop();
 	}
 	else {
-		logThatShit();
 		letsSeeIt(0,0);
 	}
 }
 
 int main(int argc, char** argv){
-	readBoard("Board1.txt");
 	feedBack = true;
+	readBoard("Board1.txt");
 	setUpBoxes();
-	logThatShit();
+	logBoard();
 	letsSeeIt(0,0);
 	solveLoop();	
-		
 	return 0;
 }
