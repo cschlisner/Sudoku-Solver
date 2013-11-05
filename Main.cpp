@@ -25,9 +25,8 @@ struct box {
 log boxLog[9], rowLog[9], columnLog[9];
 entry entries[9][9];
 box boxes[9];
-bool feedBack;
+bool feedBack, firstPriority;
 int topC = 0, topR = 0;
-
 
 void setUpBoxes(){
 	 // starting from 1st Box (top left of board)
@@ -143,7 +142,7 @@ void logBoard(){
 }
 
 
-void letsSeeIt(int x, int y){
+void dispBoard(int x, int y){
 	logBoard();
 	for (int j=0; j<9; ++j){
 		if (j%3==0)
@@ -169,31 +168,14 @@ void letsSeeIt(int x, int y){
 	cout<<endl<<endl;
 }
 
-/*void removeDuplicates(){ 
-	for (int i=0; i<9; ++i){
-		for (int k=1; k<11; ++k){
-			rowLog[i].used[k] = false;
-			columnLog[i].used[k] = false;
-			boxLog[i].used[k] = false;
-		}									<-- Make this into a function to revise non-original entries
-	}
-	for (int j=0; j<9; ++j){
-		for (int i=0; i<9; ++i){			
-			int b = findBox(i, j);
-			for (int k=1; k<11; ++k){
-				 if (entries[i][j].value == k){
-
-					if (!rowLog[j].used[k]) rowLog[j].used[k] = true;
-					else entries[i][j].value = 0;
-					if (!columnLog[i].used[k]) columnLog[i].used[k] = true;
-					else entries[i][j].value = 0;
-					if (!boxLog[b].used[k]) boxLog[b].used[k] = true;
-					else entries[i][j].value = 0;
-				}
-			}
-		}
-	}
-}*/
+void resetBoard(){ 
+	topC = 0;
+	topR = 0;
+	for (int j=0; j<9; ++j)
+		for (int i=0; i<9; ++i)			
+			 if (entries[i][j].value > 0 && !entries[i][j].original)
+				 entries[i][j].value = 0;
+}
 
 bool checkPuzzle(){
 	logBoard();
@@ -228,12 +210,30 @@ int determinePossibility(entry Entry){
 		}
 	}
 	for(int i=0; i<Entry.totalPos; ++i){
-		if (competitors[i] <= competitors[mostLikely] && competitors[i] > 0)
-			mostLikely = i;
+		if (firstPriority){
+			if (competitors[i] < competitors[mostLikely] && competitors[i] > 0)
+				mostLikely = i;
+		}
+		else if (competitors[i] <= competitors[mostLikely] && competitors[i] > 0)
+				mostLikely = i;
 		cout<<"# of possible "<<Entry.solution[i]<<"'s: "<<competitors[i]<<endl;
 		cout<<"most likely element: "<<mostLikely+1<<endl;
 	}
 	return mostLikely;
+}
+
+void solveObvious(){
+	logBoard();
+	for (int i=0; i<9; ++i){
+		for (int j=0; j<9; ++j){
+			entry ent = entries[i][j];
+			if (ent.value == 0 && ent.totalPos == 1){
+				entries[i][j].value = ent.solution[0];
+				cout<<"solved obvious"<<"("<<i<<","<<j<<"): "<<ent.solution[0]<<endl;
+				dispBoard(i,j);
+			}
+		}
+	}
 }
 		
 void solveEntry(int x, int y){
@@ -243,12 +243,12 @@ void solveEntry(int x, int y){
 	entry Entry = entries[x][y];
 	if (Entry.value == 0){
 		if (Entry.totalPos-1<0){
-			cout<<endl<<"Possibilities: "<<"[ ";
-			for (int i=0; i<9; ++i)
-				cout<<Entry.solution[i];
-			cout<<" ] totalPos: "<<Entry.totalPos<<endl;
-			letsSeeIt(x,y);
-		 	exit(0);
+			cout<<endl<<"Stuck: Resetting Board"<<endl;
+			dispBoard(x,y);
+			if (firstPriority) firstPriority = false;
+			else firstPriority = true;
+			resetBoard();
+			exit(0);
 	   	}
 		else if (Entry.totalPos-1>0){
 			ans = determinePossibility(Entry);
@@ -264,7 +264,7 @@ void solveEntry(int x, int y){
 			for (int i=0; i<9; ++i)
 				cout<<Entry.solution[i];
 			cout<<" ]  possible: "<<Entry.totalPos<<" chose element: "<<ans+1<<endl;
-			letsSeeIt(x,y);
+			dispBoard(x,y);
 		}
 	}
 	else {
@@ -278,12 +278,14 @@ void solveEntry(int x, int y){
 void prioritize(){
 	logBoard();
 	cout<<"--sorting--"<<endl;
-	int rowQueue[9], columnQueue[9], rowVals[9], colVals[9];
+	int rowQueue[9], columnQueue[9], boxQueue[9], rowVals[9], colVals[9], boxVals[9];
 	for (int i=0; i<9; ++i){
 		rowVals[i] = rowLog[i].filled;
 		colVals[i] = columnLog[i].filled;
+		boxVals[i] = boxLog[i].filled;
 		rowQueue[i] = i;
 		columnQueue[i] = i;
+		boxQueue[i] = i;
 	}
 	int i, j, flag = 1;    
     int temp, tamp;            
@@ -323,6 +325,24 @@ void prioritize(){
 		   }
 	  }
 	}
+	flag = 1;
+	for(i = 1; (i <= numLength) && flag; i++)
+	{
+	  flag = 0;
+	  for (j=0; j < (numLength -1); j++)
+	 {
+		   if (boxVals[j+1] > boxVals[j])     
+		  { 
+				temp = boxVals[j];           
+				boxVals[j] = boxVals[j+1];
+				boxVals[j+1] = temp;
+				tamp = boxQueue[j];           
+				boxQueue[j] = boxQueue[j+1];
+				boxQueue[j+1] = tamp;
+				flag = 1;           
+		   }
+	  }
+	}
 	if (columnLog[columnQueue[topC]].filled < rowLog[rowQueue[topR]].filled){
 		cout<<"solving for row "<<rowQueue[topR]<<", column ";
 		for (i=0; i<9; ++i){
@@ -351,11 +371,12 @@ void prioritize(){
 
 void solveLoop(){
 	if (!checkPuzzle()){
+		solveObvious();
 		prioritize();		
 		solveLoop();
 	}
 	else {
-		letsSeeIt(0,0);
+		dispBoard(8,8);
 	}
 }
 
@@ -364,7 +385,7 @@ int main(int argc, char** argv){
 	readBoard("Board1.txt");
 	setUpBoxes();
 	logBoard();
-	letsSeeIt(0,0);
+	dispBoard(0,0);
 	solveLoop();	
 	return 0;
 }
