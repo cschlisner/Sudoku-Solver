@@ -14,20 +14,16 @@ struct entry {
 	int value, tried, totalPos;
 	int solution[9];
 	int x, y;
-	bool original;
 };
 
 struct box {
 	int y, x;
-	entry Entry[9];
 };
 
 log boxLog[9], rowLog[9], columnLog[9];
 entry entries[9][9];
 box boxes[9];
-bool feedBack, firstPriority;
 int topC = 0, topR = 0, topB = 0;;
-ofstream logFile ("log.txt", ios::trunc);
 
 void setUpBoxes(){
 	 // starting from 1st Box (top left of board)
@@ -55,20 +51,24 @@ void setUpBoxes(){
 void readBoard(string BoardName){
 	char ent;
 	int i=0, j=0;
-	ifstream BoardFile (("Sudoku Boards/"+BoardName).c_str());
-	while (!BoardFile.eof()){
-		BoardFile.get(ent);
-		if (ent-'0' != -38){
-			entries[i][j].value = ent - '0';
-			if ((ent - '0')>0) entries[i][j].original = true;
-			if (i==8){
-				i=0;
-				++j;
+	ifstream BoardFile ((BoardName).c_str());
+	if (BoardFile){
+		while (!BoardFile.eof()){
+			BoardFile.get(ent);
+			if (ent-'0' != -38){
+				entries[i][j].value = ent - '0';
+				if (i==8){
+					i=0;
+					++j;
+				}
+				else ++i;
 			}
-			else ++i;
 		}
 	}
-	
+	else {
+		cout<<"Error: "<<BoardName<<" does not exist!"<<endl<<endl;
+		exit(0);
+	}
 }
 
 int findBox(int X, int Y){
@@ -87,7 +87,6 @@ int findBox(int X, int Y){
 }
 
 void logBoard(){
-	cout<<"--logging--"<<endl;
 	bool possible[10] = {true, true, true, true, true, true, true, true, true, true};
 	int i, j, p;
 	for (int c=0; c<9; ++c){
@@ -169,18 +168,8 @@ void dispBoard(int x, int y){
 	cout<<endl<<endl;
 }
 
-void resetBoard(){ 
-	topC = 0;
-	topR = 0;
-	for (int j=0; j<9; ++j)
-		for (int i=0; i<9; ++i)			
-			 if (entries[i][j].value > 0 && !entries[i][j].original)
-				 entries[i][j].value = 0;
-}
-
 bool checkPuzzle(){
 	logBoard();
-	cout<<"--checking--"<<endl;
 	bool allThere = false, noRepeats=true;
 	for (int i=0; i<9; ++i){
 		if (boxLog[i].filled==9 && rowLog[i].filled==9 && columnLog[i].filled==9)
@@ -198,27 +187,19 @@ bool checkPuzzle(){
 int determinePossibility(entry Entry){
 	int competitors[9], mostLikely=0, x=Entry.x, y=Entry.y;
 	memset(competitors, 0, sizeof(competitors));
-	for (int p=0; p<9; ++p){ // every possibility in entry Entry
-		for (int i=0; i<9; ++i){ // row/column incrementer
+	for (int p=0; p<9; ++p){
+		for (int i=0; i<9; ++i){
 			if (entries[i][y].value == 0 || entries[x][i].value == 0){
-				for (int j=0; j<9; ++j){ // entries[x][y] possibilities
-					if (entries[i][y].solution[j]==Entry.solution[p] && entries[i][y].value == 0) //rows
-						++competitors[p];
-					if (entries[x][i].solution[j]==Entry.solution[p] && entries[x][i].value == 0) //columns
+				for (int j=0; j<9; ++j){
+					if (entries[i][y].solution[j]==Entry.solution[p] || entries[x][i].solution[j]==Entry.solution[p] && entries[i][y].value == 0)
 						++competitors[p];
 				}
 			}
 		}
 	}
 	for(int i=0; i<Entry.totalPos; ++i){
-		if (firstPriority){
-			if (competitors[i] < competitors[mostLikely] && competitors[i] > 0)
-				mostLikely = i;
-		}
-		else if (competitors[i] <= competitors[mostLikely] && competitors[i] > 0)
-				mostLikely = i;
-		cout<<"# of possible "<<Entry.solution[i]<<"'s: "<<competitors[i]<<endl;
-		cout<<"most likely element: "<<mostLikely+1<<endl;
+		if (competitors[i] <= competitors[mostLikely] && competitors[i] > 0)
+			mostLikely = i;
 	}
 	return mostLikely;
 }
@@ -230,55 +211,33 @@ void solveObvious(){
 			entry ent = entries[i][j];
 			if (ent.value == 0 && ent.totalPos == 1){
 				entries[i][j].value = ent.solution[0];
-				cout<<"solved obvious"<<"("<<i<<","<<j<<"): "<<ent.solution[0]<<endl;
-				dispBoard(i,j);
+				logBoard();
 			}
 		}
 	}
 }
 		
 void solveEntry(int x, int y){
-	cout<<endl<<"for ("<<x<<","<<y<<"):"<<endl;
 	logBoard();
 	int ans;
 	entry Entry = entries[x][y];
 	if (Entry.value == 0){
-		if (Entry.totalPos-1<0){
-			cout<<endl<<"Stuck: yfkyfy"<<endl;
+		if (Entry.totalPos <= 0){
+			cout<<endl<<"Stuck: resetting board..."<<endl;
 			dispBoard(x,y);
-			if (firstPriority) firstPriority = false;
-			else firstPriority = true;
-			//resetBoard();
 			exit(0);
 	   	}
-		else if (Entry.totalPos-1>0){
+		else if (Entry.totalPos > 1){
 			ans = determinePossibility(Entry);
 			entries[x][y].value = Entry.solution[ans];
 		}
-		else if (Entry.totalPos-1==0){
+		else if (Entry.totalPos == 1)
 			entries[x][y].value = Entry.solution[0];
-			entries[x][y].original = true;
-			cout<<"set original"<<endl;
-		}
-		if (feedBack){
-			cout<<"tried "<<entries[x][y].value<<" of [ ";
-			for (int i=0; i<9; ++i)
-				cout<<Entry.solution[i];
-			cout<<" ]  possible: "<<Entry.totalPos<<" chose element: "<<ans+1<<endl;
-			dispBoard(x,y);
-		}
-	}
-	else {
-		cout<<"Filled. Value is "<<Entry.value<<". ";
-		if (Entry.original) cout<<"Entry is original.";
-		else cout<<"Entry is not original.";
-		cout<<endl;
 	}
 }
 
 void prioritize(){
 	logBoard();
-	cout<<"--sorting--"<<endl;
 	int rowQueue[9], columnQueue[9], boxQueue[9], rowVals[9], colVals[9], boxVals[9];
 	for (int i=0; i<9; ++i){
 		rowVals[i] = rowLog[i].filled;
@@ -347,7 +306,6 @@ void prioritize(){
 
 	bool stop = false;
 	if (boxLog[boxQueue[topB]].filled > rowLog[rowQueue[topR]].filled && boxLog[boxQueue[topB]].filled > columnLog[columnQueue[topC]].filled){
-		cout<<"solving for box "<<boxQueue[topB]<<endl;
 		for (int i=boxes[boxQueue[topB]].x; i<(boxes[boxQueue[topB]].x+3); ++i){
 				for (int j=boxes[boxQueue[topB]].y; j<(boxes[boxQueue[topB]].y+3); ++j){
 					if (entries[i][j].value == 0){
@@ -363,9 +321,7 @@ void prioritize(){
 	}
 
 	if (rowLog[rowQueue[topR]].filled > columnLog[columnQueue[topC]].filled){
-		cout<<"solving for row "<<rowQueue[topR]<<", column ";
 		for (i=0; i<9; ++i){
-			cout<<columnQueue[i];
 			if (entries[columnQueue[i]][rowQueue[topR]].value == 0){
 				solveEntry(columnQueue[i], rowQueue[topR]);
 				break;
@@ -373,9 +329,7 @@ void prioritize(){
 		}
 	}
 	else {
-		cout<<"solving for column "<<columnQueue[topC]<<", row ";
 		for (i=0; i<9; ++i){
-			cout<<rowQueue[i];
 			if (entries[columnQueue[topC]][rowQueue[i]].value == 0){
 				solveEntry(columnQueue[topC], rowQueue[i]);
 				break;
@@ -392,22 +346,27 @@ void prioritize(){
 
 void solveLoop(){
 	if (!checkPuzzle()){
+		cout<<".";
 		solveObvious();
 		prioritize();		
 		solveLoop();
 	}
 	else {
+		cout<<endl<<"All Done!"<<endl;
 		dispBoard(8,8);
 	}
 }
 
 int main(int argc, char** argv){
-	feedBack = true;
-	readBoard("Board1.txt");
-	setUpBoxes();
-	logBoard();
-	dispBoard(0,0);
-	solveLoop();	
-	logFile.close();
+	if (argc == 2){
+		cout<<"Loading \""<<argv[1]<<"\"..."<<endl;
+		readBoard(argv[1]);
+		setUpBoxes();
+		logBoard();
+		dispBoard(0,0);
+		cout<<"Solving";
+		solveLoop();
+	}
+	else cout<<"usage: "<<argv[0]<<" [Path/To/Board]"<<endl<<endl;
 	return 0;
 }
