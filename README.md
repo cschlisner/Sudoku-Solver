@@ -1,7 +1,8 @@
 Sudoku-Solver
 =============
 
-Sudoku-solving AI written in C++
+Non-erasing Sudoku-solving AI written in C++
+
 
 
 Usage: 
@@ -9,15 +10,4 @@ Usage:
 SudokuSolver [Path/To/Board]
 
 
-Boards must be in this format:
-
-000000000
-000000000
-000000000
-000000000
-000000000
-000000000
-000000000
-000000000
-000000000
-          <-- files without this space will be read incorrectly
+Boards must be in the format of the example boards provided.
