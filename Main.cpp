@@ -26,7 +26,8 @@ log boxLog[9], rowLog[9], columnLog[9];
 entry entries[9][9];
 box boxes[9];
 bool feedBack, firstPriority;
-int topC = 0, topR = 0;
+int topC = 0, topR = 0, topB = 0;;
+ofstream logFile ("log.txt", ios::trunc);
 
 void setUpBoxes(){
 	 // starting from 1st Box (top left of board)
@@ -121,7 +122,7 @@ void logBoard(){
 	}
 	for (j=0; j<9; ++j){
 		for (i=0; i<9; ++i){
-			if (entries[j][i].value == 0) {
+			if (entries[i][j].value == 0) {
 				int b = findBox(i,j);
 				entries[i][j].totalPos = 0;
 				memset(possible, true, sizeof(possible));
@@ -243,11 +244,11 @@ void solveEntry(int x, int y){
 	entry Entry = entries[x][y];
 	if (Entry.value == 0){
 		if (Entry.totalPos-1<0){
-			cout<<endl<<"Stuck: Resetting Board"<<endl;
+			cout<<endl<<"Stuck: yfkyfy"<<endl;
 			dispBoard(x,y);
 			if (firstPriority) firstPriority = false;
 			else firstPriority = true;
-			resetBoard();
+			//resetBoard();
 			exit(0);
 	   	}
 		else if (Entry.totalPos-1>0){
@@ -343,7 +344,25 @@ void prioritize(){
 		   }
 	  }
 	}
-	if (columnLog[columnQueue[topC]].filled < rowLog[rowQueue[topR]].filled){
+
+	bool stop = false;
+	if (boxLog[boxQueue[topB]].filled > rowLog[rowQueue[topR]].filled && boxLog[boxQueue[topB]].filled > columnLog[columnQueue[topC]].filled){
+		cout<<"solving for box "<<boxQueue[topB]<<endl;
+		for (int i=boxes[boxQueue[topB]].x; i<(boxes[boxQueue[topB]].x+3); ++i){
+				for (int j=boxes[boxQueue[topB]].y; j<(boxes[boxQueue[topB]].y+3); ++j){
+					if (entries[i][j].value == 0){
+						solveEntry(i,j);
+						stop = true;
+					}
+					if (stop)
+						break;
+				}
+				if (stop)
+					break;
+		}
+	}
+
+	if (rowLog[rowQueue[topR]].filled > columnLog[columnQueue[topC]].filled){
 		cout<<"solving for row "<<rowQueue[topR]<<", column ";
 		for (i=0; i<9; ++i){
 			cout<<columnQueue[i];
@@ -367,6 +386,8 @@ void prioritize(){
 		++topC;
 	if (rowLog[rowQueue[topR]].filled == 9)
 		++topR;
+	if (boxLog[boxQueue[topB]].filled == 9)
+		++topB;
 }
 
 void solveLoop(){
@@ -387,5 +408,6 @@ int main(int argc, char** argv){
 	logBoard();
 	dispBoard(0,0);
 	solveLoop();	
+	logFile.close();
 	return 0;
 }
