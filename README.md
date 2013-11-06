@@ -1,4 +1,15 @@
 Sudoku-Solver
 =============
 
-Sudoku-solving AI written in C++
+Non-erasing Sudoku-solving AI written in C++
+***
+
+
+
+Usage: 
+
+**$ SudokuSolver [Path/To/Board]**
+
+***
+
+**Boards must be in the format of the example boards provided.**
