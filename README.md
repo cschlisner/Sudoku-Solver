@@ -1,7 +1,7 @@
 Sudoku-Solver
 =============
 
-Non-erasing Sudoku-solving AI written in C++
+Non-backtracking Sudoku-solving algorithm written in C++
 ***
 
 
