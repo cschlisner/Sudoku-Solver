@@ -8,7 +8,7 @@ Non-erasing Sudoku-solving AI written in C++
 
 Usage: 
 
-**$ SudokuSolver [Path/To/Board]**
+**$ SudokuSolver [Path/To/Board] [-l for logging]**
 
 ***
 
