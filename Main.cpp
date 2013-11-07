@@ -23,7 +23,9 @@ struct box {
 log boxLog[9], rowLog[9], columnLog[9];
 entry entries[9][9];
 box boxes[9];
-int topC = 0, topR = 0, topB = 0;;
+int topC = 0, topR = 0, topB = 0;
+bool logEnable = false;
+ofstream logFile;
 
 void setUpBoxes(){
 	 // starting from 1st Box (top left of board)
@@ -87,6 +89,7 @@ int findBox(int X, int Y){
 }
 
 void logBoard(){
+	if (logEnable) logFile<<"--logging--"<<endl;
 	bool possible[10] = {true, true, true, true, true, true, true, true, true, true};
 	int i, j, p;
 	for (int c=0; c<9; ++c){
@@ -141,6 +144,31 @@ void logBoard(){
 	}
 }
 
+void writeBoard(int x, int y){
+	logBoard();
+	for (int j=0; j<9; ++j){
+		if (j%3==0)
+			 logFile<<endl<<"-------------------"<<endl;
+		else logFile<<endl;
+		for (int i=0; i<9; ++i){
+			if (i%3==0)
+				logFile<<"|";	
+			else logFile<<" ";		
+			logFile<<entries[i][j].value;	
+		}
+		logFile<<"|";
+		if (j==y)
+			logFile<<"<";
+	}
+	logFile<<endl<<"-------------------"<<endl;
+	logFile<<" ";
+	for (int i=0; i<9; ++i){
+		if (i==x)
+			logFile<<"^";
+		logFile<<"  ";				
+	}
+	logFile<<endl<<endl;
+}
 
 void dispBoard(int x, int y){
 	logBoard();
@@ -155,20 +183,12 @@ void dispBoard(int x, int y){
 			cout<<entries[i][j].value;	
 		}
 		cout<<"|";
-		if (j==y)
-			cout<<"<";
 	}
-	cout<<endl<<"-------------------"<<endl;
-	cout<<" ";
-	for (int i=0; i<9; ++i){
-		if (i==x)
-			cout<<"^";
-		cout<<"  ";				
-	}
-	cout<<endl<<endl;
+	cout<<endl<<"-------------------"<<endl<<endl;
 }
 
 bool checkPuzzle(){
+	if (logEnable) logFile<<"--checking puzzle--"<<endl;
 	logBoard();
 	bool allThere = false, noRepeats=true;
 	for (int i=0; i<9; ++i){
@@ -198,32 +218,40 @@ int determinePossibility(entry Entry){
 		}
 	}
 	for(int i=0; i<Entry.totalPos; ++i){
-		if (competitors[i] <= competitors[mostLikely] && competitors[i] > 0)
+		if (competitors[i] <= competitors[mostLikely] && competitors[i] > 0){
 			mostLikely = i;
+			if (logEnable){
+				logFile<<"# of possible "<<Entry.solution[i]<<"'s: "<<competitors[i]<<endl;
+				logFile<<"most likely element: "<<mostLikely+1<<endl;
+			}
+		}
+
 	}
 	return mostLikely;
 }
 
 void solveObvious(){
-	logBoard();
 	for (int i=0; i<9; ++i){
 		for (int j=0; j<9; ++j){
 			entry ent = entries[i][j];
 			if (ent.value == 0 && ent.totalPos == 1){
 				entries[i][j].value = ent.solution[0];
+				if (logEnable) logFile<<"solved obvious"<<"("<<i<<","<<j<<"): "<<ent.solution[0]<<endl;
 				logBoard();
+				writeBoard(i,j);
 			}
 		}
 	}
 }
 		
 void solveEntry(int x, int y){
+	if (logEnable) logFile<<endl<<"for ("<<x<<","<<y<<"):"<<endl;
 	logBoard();
 	int ans;
 	entry Entry = entries[x][y];
 	if (Entry.value == 0){
 		if (Entry.totalPos <= 0){
-			cout<<endl<<"Stuck: resetting board..."<<endl;
+			cout<<endl<<"Crashed at ("<<x<<","<<y<<"):"<<endl;
 			dispBoard(x,y);
 			exit(0);
 	   	}
@@ -233,20 +261,18 @@ void solveEntry(int x, int y){
 		}
 		else if (Entry.totalPos == 1)
 			entries[x][y].value = Entry.solution[0];
+
+		if (logEnable){
+			logFile<<"tried "<<entries[x][y].value<<" of [ ";
+			for (int i=0; i<9; ++i)
+				logFile<<Entry.solution[i];
+			logFile<<" ]  possible: "<<Entry.totalPos<<" chose element: "<<ans+1<<endl;
+			writeBoard(x,y);
+		}
 	}
 }
 
-void prioritize(){
-	logBoard();
-	int rowQueue[9], columnQueue[9], boxQueue[9], rowVals[9], colVals[9], boxVals[9];
-	for (int i=0; i<9; ++i){
-		rowVals[i] = rowLog[i].filled;
-		colVals[i] = columnLog[i].filled;
-		boxVals[i] = boxLog[i].filled;
-		rowQueue[i] = i;
-		columnQueue[i] = i;
-		boxQueue[i] = i;
-	}
+void bubbleSort(int valsArr[], int queArr[]){
 	int i, j, flag = 1;    
     int temp, tamp;            
     int numLength = 9; 
@@ -255,57 +281,40 @@ void prioritize(){
 	  flag = 0;
 	  for (j=0; j < (numLength -1); j++)
 	 {
-		   if (colVals[j+1] > colVals[j])     
+		   if (valsArr[j+1] > valsArr[j])     
 		  { 
-				temp = colVals[j];           
-				colVals[j] = colVals[j+1];
-				colVals[j+1] = temp;
-				tamp = columnQueue[j];           
-				columnQueue[j] = columnQueue[j+1];
-				columnQueue[j+1] = tamp;
+				temp = valsArr[j];           
+				valsArr[j] = valsArr[j+1];
+				valsArr[j+1] = temp;
+				tamp = queArr[j];           
+				queArr[j] = queArr[j+1];
+				queArr[j+1] = tamp;
 				flag = 1;           
 		   }
 	  }
 	}
-	flag = 1;
-	for(i = 1; (i <= numLength) && flag; i++)
-	{
-	  flag = 0;
-	  for (j=0; j < (numLength -1); j++)
-	 {
-		   if (rowVals[j+1] > rowVals[j])     
-		  { 
-				temp = rowVals[j];           
-				rowVals[j] = rowVals[j+1];
-				rowVals[j+1] = temp;
-				tamp = rowQueue[j];           
-				rowQueue[j] = rowQueue[j+1];
-				rowQueue[j+1] = tamp;
-				flag = 1;           
-		   }
-	  }
+}
+
+void prioritize(){
+	if (logEnable) logFile<<"--sorting--"<<endl;	
+	int rowQueue[9], columnQueue[9], boxQueue[9], rowVals[9], colVals[9], boxVals[9];
+	int i;
+	for (int i=0; i<9; ++i){
+		rowVals[i] = rowLog[i].filled;
+		colVals[i] = columnLog[i].filled;
+		boxVals[i] = boxLog[i].filled;
+		rowQueue[i] = i;
+		columnQueue[i] = i;
+		boxQueue[i] = i;
 	}
-	flag = 1;
-	for(i = 1; (i <= numLength) && flag; i++)
-	{
-	  flag = 0;
-	  for (j=0; j < (numLength -1); j++)
-	 {
-		   if (boxVals[j+1] > boxVals[j])     
-		  { 
-				temp = boxVals[j];           
-				boxVals[j] = boxVals[j+1];
-				boxVals[j+1] = temp;
-				tamp = boxQueue[j];           
-				boxQueue[j] = boxQueue[j+1];
-				boxQueue[j+1] = tamp;
-				flag = 1;           
-		   }
-	  }
-	}
+	
+	bubbleSort(colVals, columnQueue);
+	bubbleSort(rowVals, rowQueue);
+	bubbleSort(boxVals, boxQueue);
 
 	bool stop = false;
 	if (boxLog[boxQueue[topB]].filled > rowLog[rowQueue[topR]].filled && boxLog[boxQueue[topB]].filled > columnLog[columnQueue[topC]].filled){
+		if (logEnable) logFile<<"solving for box "<<boxQueue[topB]<<endl;
 		for (int i=boxes[boxQueue[topB]].x; i<(boxes[boxQueue[topB]].x+3); ++i){
 				for (int j=boxes[boxQueue[topB]].y; j<(boxes[boxQueue[topB]].y+3); ++j){
 					if (entries[i][j].value == 0){
@@ -321,21 +330,28 @@ void prioritize(){
 	}
 
 	if (rowLog[rowQueue[topR]].filled > columnLog[columnQueue[topC]].filled){
+		if (logEnable) logFile<<"solving for row "<<rowQueue[topR]<<", column ";
 		for (i=0; i<9; ++i){
+			if (logEnable) logFile<<columnQueue[i];
 			if (entries[columnQueue[i]][rowQueue[topR]].value == 0){
+				if (logEnable) logFile<<"<--"<<endl;
 				solveEntry(columnQueue[i], rowQueue[topR]);
 				break;
 			}
 		}
 	}
 	else {
+		if (logEnable) logFile<<"solving for column "<<columnQueue[topC]<<", row ";
 		for (i=0; i<9; ++i){
+			if (logEnable) logFile<<rowQueue[i];
 			if (entries[columnQueue[topC]][rowQueue[i]].value == 0){
+				if (logEnable) logFile<<"<--"<<endl;
 				solveEntry(columnQueue[topC], rowQueue[i]);
 				break;
 			}
 		}
 	}
+	if (logEnable) logFile<<endl;
 	if (columnLog[columnQueue[topC]].filled == 9)
 		++topC;
 	if (rowLog[rowQueue[topR]].filled == 9)
@@ -347,6 +363,7 @@ void prioritize(){
 void solveLoop(){
 	if (!checkPuzzle()){
 		cout<<".";
+		logBoard();
 		solveObvious();
 		prioritize();		
 		solveLoop();
@@ -358,7 +375,14 @@ void solveLoop(){
 }
 
 int main(int argc, char** argv){
-	if (argc == 2){
+	if (argc > 1 && argc < 4){
+		cout<<endl;
+		if (argc == 3 && string(argv[2])=="-l"){
+			cout<<"Logging Enabled"<<endl;
+			logEnable = true;
+			string name = argv[1];
+			logFile.open((name+" - solve log.txt").c_str());
+		}
 		cout<<"Loading \""<<argv[1]<<"\"..."<<endl;
 		readBoard(argv[1]);
 		setUpBoxes();
@@ -366,7 +390,8 @@ int main(int argc, char** argv){
 		dispBoard(0,0);
 		cout<<"Solving";
 		solveLoop();
+		if (logEnable) logFile.close();
 	}
-	else cout<<"usage: "<<argv[0]<<" [Path/To/Board]"<<endl<<endl;
+	else cout<<endl<<"Usage: "<<argv[0]<<" [Path/To/Board] [-l for logging]"<<endl<<endl;
 	return 0;
 }
