@@ -223,7 +223,7 @@ void solveEntry(int x, int y){
 	entry Entry = entries[x][y];
 	if (Entry.value == 0){
 		if (Entry.totalPos <= 0){
-			cout<<endl<<"Stuck: resetting board..."<<endl;
+			cout<<endl<<"Crashed at ("<<x<<","<<y<<"):"<<endl;
 			dispBoard(x,y);
 			exit(0);
 	   	}
